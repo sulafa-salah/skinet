@@ -2,36 +2,34 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Skinet.Core.Entities;
+using Skinet.Core.Interfaces;
 using Skinet.Infrastructure.Persistence;
 
-namespace Skinet.Api.Controllers
-{
+namespace Skinet.Api.Controllers;
+
     [Route("api/[controller]")]
     [ApiController]
     public class ProductsController : ControllerBase
     {
-        private readonly SkinetDbContext context;
+        private readonly IProductRepository repo;
 
-        public ProductsController(SkinetDbContext context)
+        public ProductsController(IProductRepository repo)
         {
-            this.context = context;
+            this.repo = repo;
         }
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
+        public async Task<ActionResult<IReadOnlyList<Product>>> GetProducts(string? brand, string? type, string? sort)
         {
-            return await context.Products.ToListAsync();
+            return Ok(await repo.GetProductsAsync(brand, type, sort));
         }
 
 
         [HttpGet("{id}")]
         public async Task<ActionResult<Product>> GetProduct(int id)
         {
-            var product = await context.Products.FindAsync(id);
+            var product = await repo.GetProductByIdAsync(id);
 
-            if (product == null)
-            {
-                return NotFound();
-            }
+            if (product == null) return NotFound();
 
             return product;
         }
@@ -39,11 +37,15 @@ namespace Skinet.Api.Controllers
         [HttpPost]
         public async Task<ActionResult<Product>> CreateProduct(Product product)
         {
-            context.Products.Add(product);
+            repo.AddProduct(product);
 
-            await context.SaveChangesAsync();
+            if (await repo.SaveChangesAsync())
+            {
+                return CreatedAtAction("GetProduct", new { id = product.Id }, product);
+            }
+            ;
 
-            return CreatedAtAction("GetProduct", new { id = product.Id }, product);
+            return BadRequest("Problem creating product");
         }
 
         [HttpPut("{id}")]
@@ -51,31 +53,50 @@ namespace Skinet.Api.Controllers
         {
             if (id != product.Id || !ProductExists(id)) return BadRequest("Cannot update this product");
 
-            context.Entry(product).State = EntityState.Modified;
+            repo.UpdateProduct(product);
 
-            await context.SaveChangesAsync();
+            if (await repo.SaveChangesAsync())
+            {
+                return NoContent();
+            }
+            ;
 
-            return NoContent();
+            return BadRequest("Problem updating the product");
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProduct(int id)
         {
-            var product = await context.Products.FindAsync(id);
+            var product = await repo.GetProductByIdAsync(id);
 
             if (product == null) return NotFound();
 
-            context.Products.Remove(product);
+            repo.DeleteProduct(product);
 
-            await context.SaveChangesAsync();
+            if (await repo.SaveChangesAsync())
+            {
+                return NoContent();
+            }
+            ;
 
-            return NoContent();
+            return BadRequest("Problem deleting the product");
+        }
+
+        [HttpGet("brands")]
+        public async Task<ActionResult<IReadOnlyList<string>>> GetBrands()
+        {
+            return Ok(await repo.GetBrandsAsync());
+        }
+
+        [HttpGet("types")]
+        public async Task<ActionResult<IReadOnlyList<string>>> GetTypes()
+        {
+            return Ok(await repo.GetTypesAsync());
         }
 
         private bool ProductExists(int id)
         {
-            return context.Products.Any(e => e.Id == id);
+            return repo.ProductExists(id);
         }
     }
-}
 
