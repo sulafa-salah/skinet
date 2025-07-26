@@ -33,6 +33,10 @@ namespace Skinet.Infrastructure.Persistence
             {
                 query = query.Distinct();
             }
+            if (spec.IsPagingEnabled)
+            {
+                query = query.Skip(spec.Skip).Take(spec.Take);
+            }
             // Return the final queryable result
             return query;
         }
@@ -66,6 +70,10 @@ namespace Skinet.Infrastructure.Persistence
             if (spec.IsDistinct)
             {
                 selectQuery = selectQuery?.Distinct();
+            }
+            if (spec.IsPagingEnabled)
+            {
+                selectQuery = selectQuery?.Skip(spec.Skip).Take(spec.Take);
             }
             // Return final query (fallback to casting if select is null)
             return selectQuery ?? query.Cast<TResult>();

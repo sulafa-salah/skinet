@@ -10,8 +10,8 @@ namespace Skinet.Api.Controllers;
 
     [Route("api/[controller]")]
     [ApiController]
-    public class ProductsController : ControllerBase
-    {
+    public class ProductsController : BaseApiController
+{
         private readonly IGenericRepository<Product>  repo;
 
         public ProductsController(IGenericRepository<Product>  repo)
@@ -19,14 +19,15 @@ namespace Skinet.Api.Controllers;
             this.repo = repo;
         }
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<Product>>> GetProducts(string? brand, string? type, string? sort)
+    public async Task<ActionResult<IReadOnlyList<Product>>> GetProducts([FromQuery] ProductSpecParams productParams)
     {
-        var spec = new ProductSpecification(brand, type, sort);
+        var spec = new ProductSpecification(productParams);
 
-        var products = await repo.ListAsync(spec);
-
-        return Ok(products);
+        return await CreatePagedResult(repo, spec,
+            productParams.PageIndex, productParams.PageSize);
     }
+
+
 
 
 

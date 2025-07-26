@@ -17,6 +17,10 @@ namespace Skinet.Core.Interfaces
         Expression<Func<T, object>>? OrderByDescending { get; }
         // Remove duplicate records if true
         bool IsDistinct { get; }
+        int Take { get; }
+        int Skip { get; }
+        bool IsPagingEnabled { get; }
+        IQueryable<T> ApplyCriteria(IQueryable<T> query);
     }
 
     public interface ISpecification<T, TResult> : ISpecification<T>
